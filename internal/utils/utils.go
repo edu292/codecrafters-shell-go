@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"golang.org/x/sys/unix"
 )
@@ -51,4 +53,52 @@ func ExpandPath(relPath string) string {
 	relPath, _ = strings.CutPrefix(relPath, ".")
 
 	return filepath.Join(origin, relPath)
+}
+
+func argByteToString(arg []byte) string {
+	return string(bytes.ReplaceAll(arg, []byte("'"), []byte("")))
+}
+
+func ParseInput(input []byte) (string, []string) {
+	before, after, ok := bytes.Cut(input, []byte(" "))
+	if !ok {
+		return string(input), []string{}
+	}
+
+	cmd := string(before)
+	byteArgs := after
+
+	var args []string
+	var startParseIdx int
+	var idx int
+	for {
+		startParseIdx = bytes.IndexFunc(byteArgs[idx:], func(r rune) bool {
+			return !unicode.IsSpace(r)
+		})
+		if startParseIdx == -1 {
+			break
+		}
+		startParseIdx += idx
+
+		if bytes.HasPrefix(byteArgs[startParseIdx:], []byte("'")) {
+			idx = bytes.Index(byteArgs[startParseIdx:], []byte("' "))
+		} else {
+			idx = bytes.Index(byteArgs[startParseIdx:], []byte(" "))
+		}
+
+		if idx == -1 {
+			idx = len(byteArgs)
+		} else {
+			idx += startParseIdx
+		}
+
+		if idx-startParseIdx == 1 {
+			idx++
+			continue
+		}
+
+		args = append(args, argByteToString(byteArgs[startParseIdx:idx]))
+	}
+
+	return cmd, args
 }

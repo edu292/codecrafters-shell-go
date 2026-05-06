@@ -27,7 +27,7 @@ func echoHandler(args []string) error {
 
 func typeHandler(args []string) error {
 	cmd := args[0]
-	if _, exists := builtins[cmd]; exists {
+	if _, exists := builtIns[cmd]; exists {
 		fmt.Printf("%s is a shell builtin\n", cmd)
 		return nil
 	}
@@ -61,7 +61,7 @@ func cdHandler(args []string) error {
 }
 
 func getHandler(cmd string) (handler, error) {
-	if builtinHandler, exists := builtins[cmd]; exists {
+	if builtinHandler, exists := builtIns[cmd]; exists {
 		return builtinHandler, nil
 	}
 
@@ -81,14 +81,14 @@ func getHandler(cmd string) (handler, error) {
 	return nil, fmt.Errorf("%s: command not found", cmd)
 }
 
-var builtins = make(map[string]handler)
+var builtIns = make(map[string]handler)
 
 func init() {
-	builtins["exit"] = exitHandler
-	builtins["echo"] = echoHandler
-	builtins["type"] = typeHandler
-	builtins["pwd"] = pwdHandler
-	builtins["cd"] = cdHandler
+	builtIns["exit"] = exitHandler
+	builtIns["echo"] = echoHandler
+	builtIns["type"] = typeHandler
+	builtIns["pwd"] = pwdHandler
+	builtIns["cd"] = cdHandler
 }
 
 func main() {
@@ -99,9 +99,7 @@ func main() {
 			break
 		}
 
-		fields := strings.Fields(scanner.Text())
-		cmd, args := fields[0], fields[1:]
-
+		cmd, args := utils.ParseInput(scanner.Bytes())
 		handler, err := getHandler(cmd)
 		if err != nil {
 			fmt.Println(err)
