@@ -13,6 +13,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
+		if command == "exit" {
+			break
+		}
 
 		fmt.Printf("%s: command not found\n", command)
 	}
