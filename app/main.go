@@ -25,11 +25,11 @@ func echo(args []string) error {
 func typeHandler(args []string) error {
 	cmd := args[0]
 	if _, exists := commands[cmd]; !exists {
-		fmt.Printf("%s: invalid_command", cmd)
+		fmt.Printf("%s: invalid_command\n", cmd)
 		return nil
 	}
 
-	fmt.Printf("%s is a shell buitin", cmd)
+	fmt.Printf("%s is a shell buitin\n", cmd)
 	return nil
 }
 
