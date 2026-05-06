@@ -6,12 +6,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode"
 
 	"golang.org/x/sys/unix"
 )
 
 var ErrNotFoundPath = errors.New("file not found in $PATH")
+
+type parserState int
+
+const (
+	normal parserState = iota
+	inDoubleQuote
+	inSingleQuote
+)
 
 func GetFromPath(cmd string) (string, error) {
 	path := os.Getenv("PATH")
@@ -55,50 +62,44 @@ func ExpandPath(relPath string) string {
 	return filepath.Join(origin, relPath)
 }
 
-func argByteToString(arg []byte) string {
-	return string(bytes.ReplaceAll(arg, []byte("'"), []byte("")))
-}
-
 func ParseInput(input []byte) (string, []string) {
 	before, after, ok := bytes.Cut(input, []byte(" "))
 	if !ok {
-		return string(input), []string{}
+		return string(input), []string{""}
 	}
 
 	cmd := string(before)
-	byteArgs := after
 
 	var args []string
-	var startParseIdx int
-	var idx int
-	for idx < len(byteArgs) {
-		startParseIdx = bytes.IndexFunc(byteArgs[idx:], func(r rune) bool {
-			return !unicode.IsSpace(r)
-		})
-		if startParseIdx == -1 {
-			break
-		}
-		startParseIdx += idx
-
-		if bytes.HasPrefix(byteArgs[startParseIdx:], []byte("'")) {
-			startParseIdx++
-			idx = bytes.Index(byteArgs[startParseIdx:], []byte("' "))
-		} else {
-			idx = bytes.Index(byteArgs[startParseIdx:], []byte(" "))
-		}
-
-		if idx == -1 {
-			idx = len(byteArgs)
-		} else {
-			idx += startParseIdx
-			if idx-startParseIdx == 1 {
-				continue
+	var buf []byte
+	parserState := normal
+	for _, b := range after {
+		switch {
+		case parserState == inDoubleQuote && b == '"':
+			parserState = normal
+		case parserState == inSingleQuote && b == '\'':
+			parserState = normal
+		case parserState == normal:
+			switch b {
+			case ' ':
+				if len(buf) > 0 {
+					args = append(args, string(buf))
+				}
+				buf = buf[:0]
+			case '\'':
+				parserState = inSingleQuote
+			case '"':
+				parserState = inDoubleQuote
+			default:
+				buf = append(buf, b)
 			}
+		default:
+			buf = append(buf, b)
 		}
+	}
 
-		args = append(args, argByteToString(byteArgs[startParseIdx:idx]))
-		idx++
-
+	if len(buf) > 0 {
+		args = append(args, string(buf))
 	}
 
 	return cmd, args
