@@ -12,13 +12,13 @@ import (
 
 var ErrNotFoundPath = errors.New("file not found in $PATH")
 
-type parserState int
+type ParserState int
 
 const (
-	normal parserState = iota
-	escaped
-	inDoubleQuote
-	inSingleQuote
+	StateNormal ParserState = iota
+	StateEscaped
+	InDoubleQuotes
+	InSingleQuotes
 )
 
 func GetFromPath(cmd string) (string, error) {
@@ -73,25 +73,30 @@ func ParseInput(input []byte) (string, []string) {
 
 	var args []string
 	var buf []byte
-	parserState := normal
+	parserState := StateNormal
+	var previousState ParserState
 	for _, b := range after {
 		switch parserState {
-		case escaped:
+		case StateEscaped:
 			buf = append(buf, b)
-			parserState = normal
-		case inDoubleQuote:
-			if b == '"' {
-				parserState = normal
-			} else {
+			parserState = previousState
+		case InDoubleQuotes:
+			switch b {
+			case '"':
+				parserState = StateNormal
+			case '\\':
+				previousState = parserState
+				parserState = StateEscaped
+			default:
 				buf = append(buf, b)
 			}
-		case inSingleQuote:
+		case InSingleQuotes:
 			if b == '\'' {
-				parserState = normal
+				parserState = StateNormal
 			} else {
 				buf = append(buf, b)
 			}
-		case normal:
+		case StateNormal:
 			switch b {
 			case ' ':
 				if len(buf) > 0 {
@@ -99,11 +104,12 @@ func ParseInput(input []byte) (string, []string) {
 				}
 				buf = buf[:0]
 			case '\'':
-				parserState = inSingleQuote
+				parserState = InSingleQuotes
 			case '"':
-				parserState = inDoubleQuote
+				parserState = InDoubleQuotes
 			case '\\':
-				parserState = escaped
+				previousState = parserState
+				parserState = StateEscaped
 			default:
 				buf = append(buf, b)
 			}
