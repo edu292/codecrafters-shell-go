@@ -83,6 +83,7 @@ func ParseInput(input []byte) (string, []string) {
 		if bytes.HasPrefix(byteArgs[startParseIdx:], []byte("'")) {
 			startParseIdx++
 			idx = bytes.Index(byteArgs[startParseIdx:], []byte("' "))
+			idx++
 		} else {
 			idx = bytes.Index(byteArgs[startParseIdx:], []byte(" "))
 		}
@@ -94,11 +95,13 @@ func ParseInput(input []byte) (string, []string) {
 		}
 
 		if idx-startParseIdx == 1 {
-			idx++
 			continue
 		}
 
 		args = append(args, argByteToString(byteArgs[startParseIdx:idx]))
+
+		startParseIdx += idx + 1
 	}
+
 	return cmd, args
 }
