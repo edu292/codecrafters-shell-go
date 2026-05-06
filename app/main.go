@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"codecrafters-shell-go/internal/utils"
 )
 
 var errExit = errors.New("exit")
@@ -24,12 +26,17 @@ func echo(args []string) error {
 
 func typeHandler(args []string) error {
 	cmd := args[0]
-	if _, exists := commands[cmd]; !exists {
-		fmt.Printf("%s: not found\n", cmd)
+	if _, exists := commands[cmd]; exists {
+		fmt.Printf("%s is a shell builtin\n", cmd)
 		return nil
 	}
 
-	fmt.Printf("%s is a shell builtin\n", cmd)
+	if fullpath, err := utils.LookPath(cmd); err == nil {
+		fmt.Printf("%s is %s\n", cmd, fullpath)
+		return nil
+	}
+
+	fmt.Printf("%s: not found\n", cmd)
 	return nil
 }
 
