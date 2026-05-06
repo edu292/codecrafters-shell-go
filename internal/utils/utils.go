@@ -91,10 +91,9 @@ func ParseInput(input []byte) (string, []string) {
 			idx = len(byteArgs)
 		} else {
 			idx += startParseIdx
-		}
-
-		if idx-startParseIdx == 1 {
-			continue
+			if idx-startParseIdx == 1 {
+				continue
+			}
 		}
 
 		args = append(args, argByteToString(byteArgs[startParseIdx:idx]))
