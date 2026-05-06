@@ -81,7 +81,7 @@ outer:
 			continue
 		}
 
-		ex := exec.Command(fullpath, args...)
+		ex := exec.Command(fullpath, fields...)
 		ex.Stdout = os.Stdout
 		ex.Stdin = os.Stdin
 		ex.Stderr = os.Stderr
