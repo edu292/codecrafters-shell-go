@@ -3,11 +3,9 @@ package utils
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 	"unicode"
 
 	"golang.org/x/sys/unix"
@@ -100,17 +98,9 @@ func ParseInput(input []byte) (string, []string) {
 		}
 
 		args = append(args, argByteToString(byteArgs[startParseIdx:idx]))
-		fmt.Println(startParseIdx)
-		fmt.Println(idx)
-		fmt.Println(args)
-		fmt.Println()
-		time.Sleep(200 * time.Millisecond)
-		idx ++
+		idx++
 
 	}
-	fmt.Println(startParseIdx)
-	fmt.Println(idx)
-	fmt.Println(args)
 
 	return cmd, args
 }
