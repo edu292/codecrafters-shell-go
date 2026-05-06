@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -64,18 +63,11 @@ func ExpandPath(relPath string) string {
 }
 
 func ParseInput(input []byte) (string, []string) {
-	before, after, ok := bytes.Cut(input, []byte(" "))
-	if !ok {
-		return string(input), []string{}
-	}
-
-	cmd := string(before)
-
-	var args []string
+	var fields []string
 	var buf []byte
 	parserState := StateNormal
 	var previousState ParserState
-	for _, b := range after {
+	for _, b := range input {
 		switch parserState {
 		case StateEscaped:
 			buf = append(buf, b)
@@ -100,7 +92,7 @@ func ParseInput(input []byte) (string, []string) {
 			switch b {
 			case ' ':
 				if len(buf) > 0 {
-					args = append(args, string(buf))
+					fields = append(fields, string(buf))
 				}
 				buf = buf[:0]
 			case '\'':
@@ -117,8 +109,8 @@ func ParseInput(input []byte) (string, []string) {
 	}
 
 	if len(buf) > 0 {
-		args = append(args, string(buf))
+		fields = append(fields, string(buf))
 	}
 
-	return cmd, args
+	return fields[0], fields[1:]
 }
