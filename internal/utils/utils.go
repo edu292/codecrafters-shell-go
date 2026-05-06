@@ -32,9 +32,14 @@ func ExpandPath(relPath string) string {
 		return relPath
 	}
 
-	origin, _ := os.Getwd()
+	var origin string
+	relPath, found := strings.CutPrefix(relPath, "~")
+	if found {
+		origin, _ = os.UserHomeDir()
+	} else {
+		origin, _ = os.Getwd()
+	}
 
-	var found bool
 	for {
 		relPath, found = strings.CutPrefix(relPath, "..")
 		if !found {
