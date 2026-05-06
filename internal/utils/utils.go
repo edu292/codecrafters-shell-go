@@ -16,6 +16,7 @@ type parserState int
 
 const (
 	normal parserState = iota
+	escaped
 	inDoubleQuote
 	inSingleQuote
 )
@@ -65,7 +66,7 @@ func ExpandPath(relPath string) string {
 func ParseInput(input []byte) (string, []string) {
 	before, after, ok := bytes.Cut(input, []byte(" "))
 	if !ok {
-		return string(input), []string{""}
+		return string(input), []string{}
 	}
 
 	cmd := string(before)
@@ -74,12 +75,23 @@ func ParseInput(input []byte) (string, []string) {
 	var buf []byte
 	parserState := normal
 	for _, b := range after {
-		switch {
-		case parserState == inDoubleQuote && b == '"':
+		switch parserState {
+		case escaped:
+			buf = append(buf, b)
 			parserState = normal
-		case parserState == inSingleQuote && b == '\'':
-			parserState = normal
-		case parserState == normal:
+		case inDoubleQuote:
+			if b == '"' {
+				parserState = normal
+			} else {
+				buf = append(buf, b)
+			}
+		case inSingleQuote:
+			if b == '\'' {
+				parserState = normal
+			} else {
+				buf = append(buf, b)
+			}
+		case normal:
 			switch b {
 			case ' ':
 				if len(buf) > 0 {
@@ -90,11 +102,11 @@ func ParseInput(input []byte) (string, []string) {
 				parserState = inSingleQuote
 			case '"':
 				parserState = inDoubleQuote
+			case '\\':
+				parserState = escaped
 			default:
 				buf = append(buf, b)
 			}
-		default:
-			buf = append(buf, b)
 		}
 	}
 
