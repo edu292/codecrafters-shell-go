@@ -13,13 +13,13 @@ import (
 
 var errExit = errors.New("exit")
 
-type command func(args []string) error
+type handler func(args []string) error
 
-func exit(args []string) error {
+func exitHandler(args []string) error {
 	return errExit
 }
 
-func echo(args []string) error {
+func echoHandler(args []string) error {
 	fmt.Println(strings.Join(args, " "))
 
 	return nil
@@ -27,7 +27,7 @@ func echo(args []string) error {
 
 func typeHandler(args []string) error {
 	cmd := args[0]
-	if _, exists := commands[cmd]; exists {
+	if _, exists := builtins[cmd]; exists {
 		fmt.Printf("%s is a shell builtin\n", cmd)
 		return nil
 	}
@@ -37,11 +37,10 @@ func typeHandler(args []string) error {
 		return nil
 	}
 
-	fmt.Printf("%s: not found\n", cmd)
-	return nil
+	return fmt.Errorf("%s: not found", cmd)
 }
 
-func pwd(args []string) error {
+func pwdHandler(args []string) error {
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -51,18 +50,47 @@ func pwd(args []string) error {
 	return nil
 }
 
-var commands = make(map[string]command)
+func cdHandler(args []string) error {
+	dir := args[0]
+	if err := os.Chdir(dir); err != nil {
+		return fmt.Errorf("cd: %s: No such file or directory", dir)
+	}
+	return nil
+}
+
+func getHandler(cmd string) (handler, error) {
+	if builtinHandler, exists := builtins[cmd]; exists {
+		return builtinHandler, nil
+	}
+
+	if fullpath, err := utils.LookPath(cmd); err == nil {
+		ex := exec.Command(fullpath)
+		ex.Args[0] = cmd
+		ex.Stdout = os.Stdout
+		ex.Stdin = os.Stdin
+		ex.Stderr = os.Stderr
+
+		return func(args []string) error {
+			ex.Args = append(ex.Args, args...)
+			return ex.Run()
+		}, nil
+	}
+
+	return nil, fmt.Errorf("%s: command not found", cmd)
+}
+
+var builtins = make(map[string]handler)
 
 func init() {
-	commands["exit"] = exit
-	commands["echo"] = echo
-	commands["type"] = typeHandler
-	commands["pwd"] = pwd
+	builtins["exit"] = exitHandler
+	builtins["echo"] = echoHandler
+	builtins["type"] = typeHandler
+	builtins["pwd"] = pwdHandler
+	builtins["cd"] = cdHandler
 }
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-outer:
 	for {
 		fmt.Print("$ ")
 		if !scanner.Scan() {
@@ -72,35 +100,18 @@ outer:
 		fields := strings.Fields(scanner.Text())
 		cmd, args := fields[0], fields[1:]
 
-		fn, exists := commands[cmd]
-		if exists {
-			err := fn(args)
-			if err == errExit {
-				break outer
-			}
-
-			if err != nil {
-				fmt.Printf("%v", err)
-			}
-
+		handler, err := getHandler(cmd)
+		if err != nil {
+			fmt.Println(err)
 			continue
 		}
 
-		fullpath, err := utils.LookPath(cmd)
-		if err != nil {
-			fmt.Printf("%s: command not found\n", cmd)
-			continue
+		err = handler(args)
+		if err == errExit {
+			break
 		}
-
-		ex := exec.Command(fullpath, args...)
-		ex.Args[0] = cmd
-		ex.Stdout = os.Stdout
-		ex.Stdin = os.Stdin
-		ex.Stderr = os.Stderr
-
-		err = ex.Run()
 		if err != nil {
-			fmt.Print(err)
+			fmt.Println(err)
 		}
 	}
 }
