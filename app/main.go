@@ -41,12 +41,23 @@ func typeHandler(args []string) error {
 	return nil
 }
 
+func pwd(args []string) error {
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(dir)
+	return nil
+}
+
 var commands = make(map[string]command)
 
 func init() {
 	commands["exit"] = exit
 	commands["echo"] = echo
 	commands["type"] = typeHandler
+	commands["pwd"] = pwd
 }
 
 func main() {
