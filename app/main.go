@@ -32,8 +32,8 @@ func typeHandler(args []string) error {
 		return nil
 	}
 
-	if fullpath, err := utils.LookPath(cmd); err == nil {
-		fmt.Printf("%s is %s\n", cmd, fullpath)
+	if absPath, err := utils.GetFromPath(cmd); err == nil {
+		fmt.Printf("%s is %s\n", cmd, absPath)
 		return nil
 	}
 
@@ -51,9 +51,11 @@ func pwdHandler(args []string) error {
 }
 
 func cdHandler(args []string) error {
-	dir := args[0]
-	if err := os.Chdir(dir); err != nil {
-		return fmt.Errorf("cd: %s: No such file or directory", dir)
+	relPath := args[0]
+	absolutePath := utils.ExpandPath(relPath)
+
+	if err := os.Chdir(absolutePath); err != nil {
+		return fmt.Errorf("cd: %s: No such file or directory", relPath)
 	}
 	return nil
 }
@@ -63,8 +65,8 @@ func getHandler(cmd string) (handler, error) {
 		return builtinHandler, nil
 	}
 
-	if fullpath, err := utils.LookPath(cmd); err == nil {
-		ex := exec.Command(fullpath)
+	if absPath, err := utils.GetFromPath(cmd); err == nil {
+		ex := exec.Command(absPath)
 		ex.Args[0] = cmd
 		ex.Stdout = os.Stdout
 		ex.Stdin = os.Stdin
