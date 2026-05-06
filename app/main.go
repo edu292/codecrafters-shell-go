@@ -29,7 +29,7 @@ func typeHandler(args []string) error {
 		return nil
 	}
 
-	fmt.Printf("%s is a shell buitin\n", cmd)
+	fmt.Printf("%s is a shell builtin\n", cmd)
 	return nil
 }
 
