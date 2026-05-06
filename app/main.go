@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"codecrafters-shell-go/internal/utils"
@@ -61,18 +62,33 @@ outer:
 		cmd, args := fields[0], fields[1:]
 
 		fn, exists := commands[cmd]
-		if !exists {
+		if exists {
+			err := fn(args)
+			if err == errExit {
+				break outer
+			}
+
+			if err != nil {
+				fmt.Printf("%v", err)
+			}
+
+			continue
+		}
+
+		fullpath, err := utils.LookPath(cmd)
+		if err != nil {
 			fmt.Printf("%s: command not found\n", cmd)
 			continue
 		}
 
-		err := fn(args)
-		if err == errExit {
-			break outer
-		}
+		ex := exec.Command(fullpath, args...)
+		ex.Stdout = os.Stdout
+		ex.Stdin = os.Stdin
+		ex.Stderr = os.Stderr
 
+		err = ex.Run()
 		if err != nil {
-			fmt.Printf("%v", err)
+			fmt.Print(err)
 		}
 	}
 }
