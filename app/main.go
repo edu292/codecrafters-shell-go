@@ -52,9 +52,9 @@ func pwdHandler(args []string) error {
 
 func cdHandler(args []string) error {
 	relPath := args[0]
-	absolutePath := utils.ExpandPath(relPath)
+	absPath := utils.ExpandPath(relPath)
 
-	if err := os.Chdir(absolutePath); err != nil {
+	if err := os.Chdir(absPath); err != nil {
 		return fmt.Errorf("cd: %s: No such file or directory", relPath)
 	}
 	return nil

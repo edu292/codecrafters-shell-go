@@ -28,12 +28,22 @@ func GetFromPath(cmd string) (string, error) {
 }
 
 func ExpandPath(relPath string) string {
+	if strings.HasPrefix(relPath, "/") {
+		return relPath
+	}
+
 	origin, _ := os.Getwd()
 
-	relPath, _ = strings.CutPrefix(relPath, "./")
-	for strings.HasPrefix(relPath, "..") {
-		origin = filepath.Base(origin)
+	var found bool
+	for {
+		relPath, found = strings.CutPrefix(relPath, "..")
+		if !found {
+			break
+		}
+
+		origin = filepath.Dir(origin)
 	}
+	relPath, _ = strings.CutPrefix(relPath, ".")
 
 	return filepath.Join(origin, relPath)
 }
