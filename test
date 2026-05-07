@@ -1,0 +1,76 @@
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"errors"
+	"fmt"
+	"os"
+
+	"codecrafters-shell-go/internal/handlers"
+	"codecrafters-shell-go/internal/parser"
+)
+
+type state int
+
+func main() {
+	scanner := bufio.NewScanner(os.Stdin)
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+	var op parser.Op
+
+outer:
+	for {
+		fmt.Print("$ ")
+		if !scanner.Scan() {
+			break
+		}
+
+		cmds := parser.ParseInput(scanner.Bytes())
+		op = parser.OpNil
+		for _, cmd := range cmds {
+			var handler handlers.Handler
+			var err error
+			proc := &handlers.Proc{Args: cmd.Args}
+			if op == parser.OpNil {
+				handler, err = handlers.GetHandler(cmd.Name)
+				if errors.Is(err, handlers.ErrCommandNotFound) {
+					fmt.Println(err)
+					continue
+				}
+				switch cmd.Next {
+				case parser.OpRedirectStdOut:
+					proc.Stdin = os.Stdin
+					proc.Stdout = outBuf
+					proc.Stderr = os.Stderr
+				case parser.OpRedirectStdErr:
+					proc.Stdin = os.Stdin
+					proc.Stderr = errBuf
+					proc.Stdout = os.Stdout
+				default:
+					proc.Stdin = os.Stdin
+					proc.Stdout = os.Stdout
+					proc.Stderr = os.Stderr
+				}
+
+			} else {
+				proc.Stdin = outBuf
+				handler, err = handlers.GetRedirectHandler(cmd.Name, cmd.Next)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+			}
+
+			err = handler(proc)
+			if err == handlers.ErrExit {
+				break outer
+			}
+
+			if err != nil {
+				fmt.Println(err)
+			}
+			op = cmd.Next
+		}
+	}
+}

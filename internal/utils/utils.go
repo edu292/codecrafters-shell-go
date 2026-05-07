@@ -11,15 +11,6 @@ import (
 
 var ErrNotFoundPath = errors.New("file not found in $PATH")
 
-type ParserState int
-
-const (
-	StateNormal ParserState = iota
-	StateEscaped
-	InDoubleQuotes
-	InSingleQuotes
-)
-
 func GetFromPath(cmd string) (string, error) {
 	path := os.Getenv("PATH")
 	pathDirs := filepath.SplitList(path)
@@ -62,55 +53,3 @@ func ExpandPath(relPath string) string {
 	return filepath.Join(origin, relPath)
 }
 
-func ParseInput(input []byte) (string, []string) {
-	var fields []string
-	var buf []byte
-	parserState := StateNormal
-	var previousState ParserState
-	for _, b := range input {
-		switch parserState {
-		case StateEscaped:
-			buf = append(buf, b)
-			parserState = previousState
-		case InDoubleQuotes:
-			switch b {
-			case '"':
-				parserState = StateNormal
-			case '\\':
-				previousState = parserState
-				parserState = StateEscaped
-			default:
-				buf = append(buf, b)
-			}
-		case InSingleQuotes:
-			if b == '\'' {
-				parserState = StateNormal
-			} else {
-				buf = append(buf, b)
-			}
-		case StateNormal:
-			switch b {
-			case ' ':
-				if len(buf) > 0 {
-					fields = append(fields, string(buf))
-				}
-				buf = buf[:0]
-			case '\'':
-				parserState = InSingleQuotes
-			case '"':
-				parserState = InDoubleQuotes
-			case '\\':
-				previousState = parserState
-				parserState = StateEscaped
-			default:
-				buf = append(buf, b)
-			}
-		}
-	}
-
-	if len(buf) > 0 {
-		fields = append(fields, string(buf))
-	}
-
-	return fields[0], fields[1:]
-}
