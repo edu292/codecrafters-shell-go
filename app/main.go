@@ -59,6 +59,7 @@ outer:
 
 			if errors.Is(err, handlers.ErrCommandNotFound) {
 				fmt.Println(err)
+				continue
 			}
 
 			err = handler(proc)
