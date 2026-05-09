@@ -3,7 +3,6 @@ package parser
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 )
 
 type ParserState int
