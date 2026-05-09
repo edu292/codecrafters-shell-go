@@ -17,6 +17,7 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	buf := new(bytes.Buffer)
 	var err error
+
 outer:
 	for {
 		fmt.Print("$ ")
@@ -25,23 +26,23 @@ outer:
 		}
 
 		cmds := parser.ParseInput(scanner.Bytes())
-		op := parser.OpNil
+		op := parser.Nil
 		for _, cmd := range cmds {
 			proc := &handlers.Proc{Args: cmd.Args}
-			if op != parser.OpNil {
+			if op != parser.Nil {
 				proc.Stdin = buf
 			} else {
 				proc.Stdin = os.Stdin
 			}
 
-			switch cmd.Next {
-			case parser.OpRedirectStdOut:
+			switch {
+			case parser.Is(cmd.Op, parser.Stdout):
 				proc.Stdout = buf
 				proc.Stderr = os.Stderr
-			case parser.OpRedirectStdErr:
+			case parser.Is(cmd.Op, parser.Stderr):
 				proc.Stdout = os.Stdout
 				proc.Stderr = buf
-			case parser.OpRedirectBoth:
+			case parser.Is(cmd.Op, parser.Both):
 				proc.Stdout = buf
 				proc.Stderr = buf
 			default:
@@ -50,31 +51,29 @@ outer:
 			}
 
 			var handler handlers.Handler
-			switch op {
-			case parser.OpRedirectStdOut, parser.OpRedirectStdErr, parser.OpRedirectBoth:
-				handler, err = handlers.GetRedirectHandler(cmd.Name, op)
-			default:
+			if parser.Is(op, parser.Redir) {
+				handler, err = handlers.GetRedirectHandler(cmd.Name, parser.Is(op, parser.Append))
+			} else {
 				handler, err = handlers.GetHandler(cmd.Name)
 			}
 
-			if err != nil {
-				if errors.Is(err, handlers.ErrCommandNotFound) {
-					fmt.Println(err)
-					continue
-				}
-
+			if errors.Is(err, handlers.ErrCommandNotFound) {
 				fmt.Println(err)
 			}
 
 			err = handler(proc)
-			if err == handlers.ErrExit {
-				break outer
+			if err != nil {
+				if err == handlers.ErrExit {
+					break outer
+				}
+				fmt.Println(err)
 			}
-			if cmd.Next == parser.OpNil {
+
+			if cmd.Op == parser.Nil {
 				buf.Reset()
 			}
 
-			op = cmd.Next
+			op = cmd.Op
 		}
 	}
 }

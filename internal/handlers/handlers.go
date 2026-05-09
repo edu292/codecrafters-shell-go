@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"codecrafters-shell-go/internal/parser"
 	"codecrafters-shell-go/internal/utils"
 )
 
@@ -101,7 +100,8 @@ func GetHandler(name string) (Handler, error) {
 			ex.Stdin = p.Stdin
 			ex.Stdout = p.Stdout
 			ex.Stderr = p.Stderr
-			return ex.Run()
+			ex.Run()
+			return nil
 		}, nil
 	}
 
@@ -109,9 +109,16 @@ error:
 	return nil, fmt.Errorf("%s: %w", name, ErrCommandNotFound)
 }
 
-func GetRedirectHandler(relPath string, op parser.Op) (Handler, error) {
+func GetRedirectHandler(relPath string, append bool) (Handler, error) {
+	flag := os.O_CREATE | os.O_WRONLY
+	if append {
+		flag |= os.O_APPEND
+	} else {
+		flag |= os.O_TRUNC
+	}
+
 	return func(p *Proc) error {
-		f, err := os.OpenFile(utils.ExpandPath(relPath), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0o600)
+		f, err := os.OpenFile(utils.ExpandPath(relPath), flag, 0o600)
 		if err != nil {
 			return err
 		}
